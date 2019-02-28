@@ -8,55 +8,67 @@
 #
 
 library(shiny)
+library(UsingR)
+library(caret)
+library(randomForest)
 
-# Define server logic required to draw a histogram
+#Server function
 shinyServer(function(input, output) {
-   
-  mtcars$mpgsp <- ifelse(mtcars$mpg - 20 > 0, mtcars$mpg - 20, 0 )
-  model1 <- lm(hp ~ mpg, data = mtcars)
-  model2 <- lm(hp ~ mpgsp + mpg, data = mtcars)
   
-  model1pred <- reactive({
-     mpgInput <- input$sliderMPG
-     predict(model1, newdata = data.frame(mpg= mpgInput))
+  #Linear Regression model
+  model1 <- lm(price ~ carat, data =  diamond)
+  
+  #Random Forest model
+  model2 <- train(price ~ ., method = "rf", data = diamond )
+  
+  #Predict function for linear regression model based on user input 
+  model1Pred <- reactive({
+    slidInput <- input$slide1
+     predict(model1, newdata = data.frame(carat = slidInput))
+    
   })
   
-  model2pred <- reactive({
-     mpgInput <- input$sliderMPG
-     predict(model2, newdata = data.frame(mpg = mpgInput,
-                                          mpgsp = ifelse(mpgInput - 20 > 0,
-                                                         mpgInput - 20, 0)))
+  #Prdict function for random forest model based on user input
+  model2Pred <- reactive({
+    slidInput <- input$slide1
+    predict(model2, newdata = data.frame(carat = slidInput))
+    
   })
   
-  output$plot1 <- renderPlot({
-     mpgInput <- input$sliderMPG
+  #Plot the predicted value and dataset value.
+   output$modelPlot <- renderPlot({
      
-     plot(mtcars$mpg, mtcars$hp, xlab = "Miles Per Gallon",
-          ylab = "Horsepower", bty = "n", pch = 16, 
-          xlim = c(10,35), ylim = c(50,350))
+     slidInput <- input$slide1
      
-     if(input$showModel1){
+     plot(diamond$carat, diamond$price, xlab = "Diamond Carat",
+          ylab = "Diamond Price", bty = "n", pch = 16)
+     
+     if(input$showModel1){ 
        abline(model1, col = "red", lwd =2)
+       
      }
      
      if(input$showModel2){
-       model2lines <- predict(model2, newdata = data.frame(
-         mpg = 10:35, mpgsp = ifelse(10:35 - 20 > 0 , 10:35 - 20, 0)
-       ))
-       lines(10:35, model2lines, col = "blue", lwd = 2)
+      x <- seq(0.11,0.35, by=0.002)
+      model2lines <- predict(model2, newdata = data.frame(carat = x))
+      lines(x, model2lines , col = "blue", lwd =4)
+      ## abline(c(), col = "blue", lwd = 3)
      }
      
-     legend(25, 250, c("Model 1 Prediction", "Model 2 Prediction"), pch = 16,
+     legend(2, 5, c("Model 1 Prediction", "Model 2 Prediction"), pch = 16,
             col = c("red", "blue"), bty = "n", cex = 1.2)
-      points(mpgInput, model1pred(), col = "red", pch =16, cex = 2)
-      points(mpgInput, model2pred(), col = "blue", pch = 16, cex = 2)
-  })
-  
-  output$pred1 <- renderText({
-    model1pred()
-  })
-  
-  output$pred2 <- renderText({
-    model2pred()
-  })
+     points(slidInput, model1Pred(), col = "red", pch =16, cex = 2)
+     points(slidInput, model2Pred(), col = "blue", pch = 16, cex = 2)
+   })
+   
+   #output model1 predicted value
+   output$textM1 <- renderText({
+     model1Pred()
+   })
+   
+   #output model2 predicted value
+   output$textM2 <- renderText({
+     model2Pred()
+   })
+ 
 })
